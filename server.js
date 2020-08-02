@@ -7,6 +7,10 @@ const { default: Movie } = require("./Models/Movie");
 const Location = require("./Models/Location").default;
 const Weather = require("./Models/Weather").default;
 const Trails = require("./Models/Trails").default;
+const Yelp = require("./Models/Yelp").default;
+
+const superagent = require('superagent');
+
 
 const app = express();
 
@@ -39,6 +43,8 @@ app.get("/location", handleLocation);
 app.get("/weather", handelWeather);
 app.get("/trails", handelTrails);
 app.get("/movies", handelMovies);
+// app.get("/yelp", handelYelp);
+
 
 
 function handleLocation(req, res, next) {
@@ -190,18 +196,91 @@ function handelMovies(req, res) {
 
 
 function getMoviesFromAPI(region_code, callback) {
-    Movie.all = [];
-    let APIKEY = process.env.MOVIE_API_KEY;
-    let url = `https://api.themoviedb.org/3/discover/movie?api_key=${APIKEY}&language=ar-Ar-En-en&region=${region_code}&release_date.gte=2016-11-16&release_date.lte=2016-12-02&with_release_type=2|3`;
-      axios.get(url).then(data => {
-      const returnedData = data.data.results.map(item => {
-        //here
-        return new Movie(item);
-      });
-      // after map => return returnedData
-      callback(returnedData);
+  Movie.all = [];
+  let APIKEY = process.env.MOVIE_API_KEY;
+  let url = `https://api.themoviedb.org/3/discover/movie?api_key=${APIKEY}&language=ar-Ar-En-en&region=${region_code}&release_date.gte=2016-11-16&release_date.lte=2016-12-02&with_release_type=2|3`;
+  axios.get(url).then(data => {
+    const returnedData = data.data.results.map(item => {
+      //here
+      return new Movie(item);
     });
-  }
+    // after map => return returnedData
+    callback(returnedData);
+  });
+}
+
+
+
+
+// function handelYelp(req, res) {
+//   // let search_query=req.query.search_query;
+//   // let formatted_query=req.query.formatted_query;
+//   let latitude = req.query.latitude;
+//   let longitude = req.query.longitude;
+//   // let region_code=req.query.region_code;
+//   let page1 = req.query.page;
+//   // getYelpFromAPI(city, (returnedData) => {
+//   //   res.status(200).send(returnedData);
+//   // });
+//   let result = getYelpFromAPI(latitude, longitude, page1);
+//   console.log('result: ', result);
+//   res.send(result);
+// }
+
+
+
+// function getYelpFromAPI(lat, lon, page) {
+//   let APIKEY = process.env.YELP_API_KEY;
+//   let offset = (page - 1) * 5;
+//   let url = `https://api.yelp.com/v3/businesses/search?term=restaurants&latitude=${lat}&longitude=${lon}&limit=5&offset=${offset}`;
+//   let data = superagent
+//     .get(url)
+//     .set('Authorization', `Bearer ${APIKEY}`)
+//     .then((res) => {
+//      
+
+//       return res.body.businesses.map((e) => {
+//         return new Yelp(e);
+//       });
+//     })
+//     .catch((error) => {
+//       console.log(error);
+//     });
+//   return data;
+// }
+
+app.get("/yelp", async (request, response) => {
+  let lat = request.query.latitude;
+  let lon = request.query.longitude;
+  let page = request.query.page;
+  let status = 200;
+  response.status(status).send(await getYelp(lat, lon, page));
+});
+
+
+function getYelp(lat, lon, page) {
+  let APIKEY = process.env.YELP_API_KEY;
+  let offset = (page - 1) * 5;
+  let url = `https://api.yelp.com/v3/businesses/search?term=restaurants&latitude=${lat}&longitude=${lon}&limit=5&offset=${offset}`;
+  let data = superagent
+    .get(url)
+    .set('Authorization', `Bearer ${APIKEY}`)
+    .then((res) => {
+      console.log('res: ', res);
+      console.log('res.body: ', res.body);
+      console.log('res.body.businesses: ', res.body.businesses);
+
+      return res.body.businesses.map((e) => {
+        return new Yelp(e);
+      });
+    })
+    .catch((error) => {
+      console.log(error);
+    });
+  return data;
+}
+
+
 
 
 
