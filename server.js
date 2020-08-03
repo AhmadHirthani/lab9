@@ -202,13 +202,16 @@ function getMoviesFromAPI(region_code, callback) {
 app.get("/yelp", async (request, response) => {
   let lat = request.query.latitude;
   let lon = request.query.longitude;
-  response.send(await getYelp(lat, lon));
+  let lon = request.query.page;
+  response.send(await getYelp(lat, lon, page));
 });
 
 
-function getYelp(lat, lon) {
+function getYelp(lat, lon, page) {
   let APIKEY = process.env.YELP_API_KEY;
-  let url = `https://api.yelp.com/v3/businesses/search?term=restaurants&latitude=${lat}&longitude=${lon}`;
+  let limit=5;
+  let offset = (page - 1) * limit;
+  let url = `https://api.yelp.com/v3/businesses/search?term=restaurants&latitude=${lat}&longitude=${lon}&limit=${limit}&offset=${offset}`;
   let data = superagent
     .get(url)
     .set('Authorization', `Bearer ${APIKEY}`)
