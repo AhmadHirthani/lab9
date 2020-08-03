@@ -164,7 +164,6 @@ function handelTrails(req, res) {
   getTrailsFromAPI(latitude, longitude).then(returnedData => {
     res.send(returnedData);
   }).catch((err) => {
-    //console.log(err.message);
   });
 }
 
@@ -181,17 +180,9 @@ function getTrailsFromAPI(lat, lon) {
 
 function handelMovies(req, res) {
   let region_code = req.query.region_code;
-
   getMoviesFromAPI(region_code, (returnedData) => {
     res.status(200).send(returnedData);
   });
-
-
-  // return axios.get(url).then(data => {
-  //   let x = new Movie(data.data.results[0]);
-  //   res.status(200).send(x);
-  //   return x;
-  // });
 };
 
 
@@ -201,77 +192,29 @@ function getMoviesFromAPI(region_code, callback) {
   let url = `https://api.themoviedb.org/3/discover/movie?api_key=${APIKEY}&language=ar-Ar-En-en&region=${region_code}&release_date.gte=2016-11-16&release_date.lte=2016-12-02&with_release_type=2|3`;
   axios.get(url).then(data => {
     const returnedData = data.data.results.map(item => {
-      //here
       return new Movie(item);
     });
-    // after map => return returnedData
     callback(returnedData);
   });
 }
 
-
-
-
-// function handelYelp(req, res) {
-//   // let search_query=req.query.search_query;
-//   // let formatted_query=req.query.formatted_query;
-//   let latitude = req.query.latitude;
-//   let longitude = req.query.longitude;
-//   // let region_code=req.query.region_code;
-//   let page1 = req.query.page;
-//   // getYelpFromAPI(city, (returnedData) => {
-//   //   res.status(200).send(returnedData);
-//   // });
-//   let result = getYelpFromAPI(latitude, longitude, page1);
-//   console.log('result: ', result);
-//   res.send(result);
-// }
-
-
-
-// function getYelpFromAPI(lat, lon, page) {
-//   let APIKEY = process.env.YELP_API_KEY;
-//   let offset = (page - 1) * 5;
-//   let url = `https://api.yelp.com/v3/businesses/search?term=restaurants&latitude=${lat}&longitude=${lon}&limit=5&offset=${offset}`;
-//   let data = superagent
-//     .get(url)
-//     .set('Authorization', `Bearer ${APIKEY}`)
-//     .then((res) => {
-//      
-
-//       return res.body.businesses.map((e) => {
-//         return new Yelp(e);
-//       });
-//     })
-//     .catch((error) => {
-//       console.log(error);
-//     });
-//   return data;
-// }
-
+//yelp feature
 app.get("/yelp", async (request, response) => {
   let lat = request.query.latitude;
   let lon = request.query.longitude;
-  let page = request.query.page;
-  let status = 200;
-  response.status(status).send(await getYelp(lat, lon, page));
+  response.send(await getYelp(lat, lon));
 });
 
 
-function getYelp(lat, lon, page) {
+function getYelp(lat, lon) {
   let APIKEY = process.env.YELP_API_KEY;
-  let offset = (page - 1) * 5;
-  let url = `https://api.yelp.com/v3/businesses/search?term=restaurants&latitude=${lat}&longitude=${lon}&limit=5&offset=${offset}`;
+  let url = `https://api.yelp.com/v3/businesses/search?term=restaurants&latitude=${lat}&longitude=${lon}`;
   let data = superagent
     .get(url)
     .set('Authorization', `Bearer ${APIKEY}`)
     .then((res) => {
-      console.log('res: ', res);
-      console.log('res.body: ', res.body);
-      console.log('res.body.businesses: ', res.body.businesses);
-
-      return res.body.businesses.map((e) => {
-        return new Yelp(e);
+      return res.body.businesses.map((yelpItem) => {
+        return new Yelp(yelpItem);
       });
     })
     .catch((error) => {
@@ -279,10 +222,6 @@ function getYelp(lat, lon, page) {
     });
   return data;
 }
-
-
-
-
 
 
 app.all("*", (req, res) => {
