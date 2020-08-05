@@ -1,23 +1,25 @@
+"use strict";
 const express = require("express");
 const pg = require('pg');
 require('dotenv').config();
 const axios = require("axios");
 const { default: Movie } = require("./Models/Movie");
-
 const Location = require("./Models/Location").default;
 const Weather = require("./Models/Weather").default;
 const Trails = require("./Models/Trails").default;
 const Yelp = require("./Models/Yelp").default;
-
 const superagent = require('superagent');
-
-
 const app = express();
-
 const client = new pg.Client(process.env.DATABASE_URL);
+const PORT = process.env.PORT || 3000;
 
+app.all("*", (req, res) => {
+  res.status(404).send({ msg: "Sorry, page not found !" });
+});
 
-
+app.use((err, req, res, next) => { // eslint-disable-line
+  res.status(500).send({ msg: "Sorry, something went wrong !" });
+});
 
 app.all("*", (req, res, next) => {
   //console.log(`${req.method} ${req.url}`);
@@ -26,7 +28,6 @@ app.all("*", (req, res, next) => {
     "Access-Control-Allow-Methods",
     "GET, HEAD, PUT, PATCH, POST, DELETE"
   );
-
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
@@ -35,7 +36,7 @@ app.all("*", (req, res, next) => {
 });
 
 app.get("/", (req, res) => {
-  res.status(200).send({ msg: "Hello World" });
+  res.status(200).send({ msg: "Welcome to my App. Ahmad Alhrthani" });
 });
 
 
@@ -45,8 +46,7 @@ app.get("/trails", handelTrails);
 app.get("/movies", handelMovies);
 // app.get("/yelp", handelYelp);
 
-
-
+//handle location function
 function handleLocation(req, res, next) {
   const { city } = req.query;
   try {
@@ -69,20 +69,11 @@ function handleLocation(req, res, next) {
   }
 };
 
+//get location from API function
 function getLocationFromAPI(city, callback) {
   let APIKEY = process.env.LOCATION_API_KEY;
-  // let url = `https://api.locationiq.com/v1/autocomplete.php?key=5a5e5bcd6b7693&q=gaza`;
   let url = `https://api.locationiq.com/v1/autocomplete.php?key=${APIKEY}&q=${city}`;
-
-  // let url = `https://eu1.locationiq.com/v1/search.php?key=${LOCATIONAPIKEY}&q=${city}&format=json`;
   axios.get(url).then(response => {
-    // console.log(Object.keys(response.data[0]));
-    // console.log(response.data[0]);
-    // console.log('data[0].display_place: ', response.data[0].display_place);
-    // console.log('data[0].lat: ', response.data[0].lat);
-    // console.log('data[0].lat: ', response.data[0].lon);
-    // console.log('data[0].address.country_code: ', response.data[0].address.country_code);
-    //callback(new Location(city, response.data[0]));
     callback(new Location(
       city,
       response.data[0].display_place,
@@ -92,22 +83,15 @@ function getLocationFromAPI(city, callback) {
   });
 }
 
+//get location from DB function
 function getLocationFromDB(city, callback) {
   const SQL = `SELECT * FROM locations WHERE search_query=$1;`;
   const values = [city];
   client.query(SQL, values)
     .then(result => {
-      // Check to see if the location was found and return the results
       console.log('result.rowCount', result.rowCount);
       if (result.rowCount > 0) {
         console.log('From DB');
-        // console.log('result.rows[0] keys', Object.keys(result.rows[0]));
-
-        // console.log('result.rows[0]', result.rows[0]);
-        // console.log('result.rows.display_name', result.rows[0].display_name);
-        // console.log('result.rows.lat', result.rows[0].lat);
-        // console.log('result.rows.long', result.rows[0].lon);
-        // console.log('result.rows.region_code', result.rows[0].region_code);
         let locationItem = result.rows[0];
         let locationData = new Location(
           city,
@@ -115,7 +99,6 @@ function getLocationFromDB(city, callback) {
           locationItem.lat,
           locationItem.lon,
           locationItem.region_code);
-        // console.log('locationData', locationData);
         callback(locationData);
       } else {
         callback(null);
@@ -123,6 +106,7 @@ function getLocationFromDB(city, callback) {
     });
 }
 
+//add location to DB function
 function addLocationToDB(locationData) {
   const SQL = `INSERT INTO locations (search_query,display_name,lat,lon,region_code) VALUES ('${locationData.search_query}','${locationData.formatted_query}','${locationData.latitude}','${locationData.longitude}','${locationData.region_code}');`;
   console.log('SQL: ', SQL);
@@ -133,44 +117,41 @@ function addLocationToDB(locationData) {
     });
 }
 
+//handle weather function
 function handelWeather(req, res) {
   let city = req.query.search_query;
-
   getWeatherFromAPI(city, (returnedData) => {
     res.status(200).send(returnedData);
   });
 }
 
+//get weather from API function
 function getWeatherFromAPI(city, callback) {
   Weather.all = [];
-
   let WEATHER_API_KEY = process.env.WEATHER_API_KEY;
   let url = `https://api.weatherbit.io/v2.0/forecast/daily?city=${city}&key=${WEATHER_API_KEY}`;
-
   axios.get(url).then(data => {
     const returnedData = data.data.data.map(item => {
       return new Weather(city, item);
     });
-    // after map => return returnedData
     callback(returnedData);
   });
 }
 
-
+//handle Trails function
 function handelTrails(req, res) {
   let latitude = req.query.latitude;
   let longitude = req.query.longitude;
-
   getTrailsFromAPI(latitude, longitude).then(returnedData => {
     res.send(returnedData);
   }).catch((err) => {
   });
 }
 
+//get Trails from API function
 function getTrailsFromAPI(lat, lon) {
   let APIKEY = process.env.HIKING_API_KEY;
   let url = `https://www.hikingproject.com/data/get-trails?lat=${lat}&lon=${lon}&maxDistance=200&key=${APIKEY}`;
-
   return axios.get(url).then(data => {
     return data.data.trails.map(data => {
       return new Trails(data);
@@ -178,6 +159,7 @@ function getTrailsFromAPI(lat, lon) {
   });
 }
 
+//handle Movies function
 function handelMovies(req, res) {
   let region_code = req.query.region_code;
   getMoviesFromAPI(region_code, (returnedData) => {
@@ -185,7 +167,7 @@ function handelMovies(req, res) {
   });
 };
 
-
+//get Movies from API function
 function getMoviesFromAPI(region_code, callback) {
   Movie.all = [];
   let APIKEY = process.env.MOVIE_API_KEY;
@@ -198,18 +180,18 @@ function getMoviesFromAPI(region_code, callback) {
   });
 }
 
-//yelp feature
+//handle yelp function
 app.get("/yelp", async (request, response) => {
   let lat = request.query.latitude;
   let lon = request.query.longitude;
-  let lon = request.query.page;
+  let page = request.query.page;
   response.send(await getYelp(lat, lon, page));
 });
 
-
+//get Yelp from API function
 function getYelp(lat, lon, page) {
   let APIKEY = process.env.YELP_API_KEY;
-  let limit=5;
+  let limit = 5;
   let offset = (page - 1) * limit;
   let url = `https://api.yelp.com/v3/businesses/search?term=restaurants&latitude=${lat}&longitude=${lon}&limit=${limit}&offset=${offset}`;
   let data = superagent
@@ -226,23 +208,12 @@ function getYelp(lat, lon, page) {
   return data;
 }
 
-
-app.all("*", (req, res) => {
-  res.status(404).send({ msg: "Sorry, page not found !" });
-})
-
-app.use((err, req, res, next) => { // eslint-disable-line
-  res.status(500).send({ msg: "Sorry, something went wrong !" });
-})
-
-const PORT = process.env.PORT || 3000;
-
+//conect to database then start listening
 client.connect()
   .then(() => {
     app.listen(PORT, () =>
       console.log(`listening on ${PORT}`)
     );
   }).catch((err) => {
-    //console.log(err.message);
   });
 
