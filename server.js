@@ -13,14 +13,6 @@ const app = express();
 const client = new pg.Client(process.env.DATABASE_URL);
 const PORT = process.env.PORT || 3000;
 
-app.all("*", (req, res) => {
-  res.status(404).send({ msg: "Sorry, page not found !" });
-});
-
-app.use((err, req, res, next) => { // eslint-disable-line
-  res.status(500).send({ msg: "Sorry, something went wrong !" });
-});
-
 app.all("*", (req, res, next) => {
   //console.log(`${req.method} ${req.url}`);
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -38,8 +30,6 @@ app.all("*", (req, res, next) => {
 app.get("/", (req, res) => {
   res.status(200).send({ msg: "Welcome to my App. Ahmad Alhrthani" });
 });
-
-
 app.get("/location", handleLocation);
 app.get("/weather", handelWeather);
 app.get("/trails", handelTrails);
@@ -216,4 +206,13 @@ client.connect()
     );
   }).catch((err) => {
   });
+
+app.all("*", (req, res) => {
+  res.status(404).send({ msg: "Sorry, page not found !" });
+});
+
+app.use((err, req, res, next) => { // eslint-disable-line
+  res.status(500).send({ msg: "Sorry, something went wrong !" });
+});
+
 
